@@ -12,6 +12,7 @@ socketio = SocketIO(app)
 def index():
     return render_template('index.html')
 
+
 @socketio.on('mensagem')
 def handle_message(data):
     print('recebido:', data)         # mostra no servidor

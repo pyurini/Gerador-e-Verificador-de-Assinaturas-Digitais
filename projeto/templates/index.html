@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mensagens Assinadas</title>
+    <!-- Inclui a biblioteca Socket.IO do cliente (URL corrigido) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <!-- Inclui Font Awesome para ícones (URL corrigido) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inclui o seu arquivo de estilo CSS personalizado -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h1>Mensagens Assinadas</h1>
+            </div>
+            <div class="status">
+                <div class="status-indicator"></div>
+                <span>Conectado</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chat">
+            <!-- Mensagens serão inseridas aqui via JavaScript -->
+            <!-- A mensagem de sistema inicial será enviada pelo bot ao conectar -->
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="msg" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button onclick="send()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Inicializa a conexão Socket.IO.
+        // Por padrão, ele tenta se conectar ao mesmo host e porta da página.
+        const socket = io();
+        const chatContainer = document.getElementById('chat');
+        const messageInput = document.getElementById('msg'); // Renomeado para clareza
+
+        // Função para adicionar uma mensagem ao chat
+        // Agora recebe um objeto completo de mensagem, como enviado pelo servidor
+        function addMessage(messageData) {
+            const sender = messageData.sender;
+            const content = messageData.content;
+            const signature = messageData.signature;
+            const isUser = messageData.isUser;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'system-message');
+            
+            const now = new Date();
+            const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                    <span class="message-time">${timeString}</span>
+                </div>
+                <div class="message-content">${content}</div>
+                <div class="message-signature">sig: ${signature}</div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            // Rolagem automática para a última mensagem
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Recebe mensagens do servidor (evento 'resposta')
+        // O servidor agora envia um objeto com 'sender', 'content', 'signature' e 'isUser'
+        socket.on('resposta', messageData => {
+            // --- DEBUG: Imprime a mensagem recebida do servidor no console do navegador ---
+            console.log("DEBUG (Cliente): Mensagem recebida do servidor:", messageData);
+            addMessage(messageData); // Passa o objeto completo para a função addMessage
+        });
+        
+        // Envia mensagem para o servidor
+        function send() {
+            const text = messageInput.value.trim(); // Usa messageInput
+            if (text === '') return;
+            
+            // Envia apenas o texto da mensagem para o servidor no evento 'mensagem'
+            socket.emit('mensagem', text);
+            
+            // Limpa o campo de entrada
+            messageInput.value = ''; // Usa messageInput
+        }
+        
+        // Permite enviar com Enter
+        messageInput.addEventListener('keypress', function(e) { // Usa messageInput
+            if (e.key === 'Enter') {
+                send();
+            }
+
+        
+        })
+        
+        <!-- Adicione isso no <script> existente -->
+ function addMessage(messageData) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${messageData.isUser ? 'user-message' : 'system-message'}`;
+        
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        // Verificação apenas para mensagens do bot
+        let verifyBtn = '';
+        if (!messageData.isUser && messageData.signature !== 'N/A') {
+            verifyBtn = `
+                <div class="signature-verify">
+                    <span class="signature-preview">Assinatura: ${messageData.signature.substring(0,15)}...</span>
+                    <button class="verify-btn" onclick="verifyMessage('${messageData.content}', '${messageData.signature}', '${messageData.salt}')">
+                        <i class="fas fa-check-circle"></i> Verificar
+                    </button>
+                </div>
+            `;
+        } else if (messageData.signature !== 'N/A') {
+            verifyBtn = `
+                <div class="signature-verify">
+                    <span class="signature-preview">Assinatura: ${messageData.signature.substring(0,15)}...</span>
+                </div>
+            `;
+        }
+        
+        msgDiv.innerHTML = `
+            <div class="message-header">
+                <span class="message-sender">${messageData.sender}</span>
+                <span class="message-time">${timeString}</span>
+            </div>
+            <div class="message-content">${messageData.content}</div>
+            ${verifyBtn}
+        `;
+        
+        document.getElementById('chat').appendChild(msgDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    msgDiv.innerHTML = `
+        <div class="header">
+            <strong>${messageData.sender}</strong>
+            <span>${new Date().toLocaleTimeString()}</span>
+        </div>
+        <p>${messageData.content}</p>
+        <div class="signature">
+            <small>Assinatura: ${messageData.signature.substring(0,20)}...</small>
+            ${verifyBtn}
+        </div>
+    `;
+    
+    document.getElementById('chat').appendChild(msgDiv);
+
+
+async function verifyMessage(msg, sig, salt) {
+    const response = await fetch('/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, signature: sig, salt: salt })
+    });
+    const result = await response.json();
+    alert(result.valid ? "✓ Assinatura VÁLIDA" : "✗ Assinatura INVÁLIDA!");
+};
+    </script>
+</body>
+</html>

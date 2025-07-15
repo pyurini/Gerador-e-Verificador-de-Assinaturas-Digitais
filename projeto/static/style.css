@@ -264,13 +264,13 @@ button:active {
 }
 
 button {
-    background: #8d66e7;
+    background: var(--primary); /* Ajustado para usar a variável CSS */
     color: white;
     border: none;
-    padding: 2px 4px;
+    padding: 2px 4px; /* Ajustado para ser mais compacto */
     border-radius: 4px;
     cursor: pointer;
-    margin-top: 5px;
+    margin-top: 5px; /* Pode ser removido se o layout for flex */
 }
 
 /* Estilos para verificação de assinatura */
@@ -291,6 +291,7 @@ button {
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap; /* Garante que o texto não quebre linha */
 }
 
 .verify-btn {
@@ -318,7 +319,7 @@ button {
 }
 
 .verify-btn i {
-    font-size: 0.20em;
+    font-size: 1em; /* Ajustado para um tamanho razoável */
 }
 
 /* Estilos para mensagens do sistema */
@@ -328,4 +329,97 @@ button {
 
 .user-message .signature-verify {
     border-top-color: #1864ab;
+}
+
+.verification-badge {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  background: #2b8a3e;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: help;
+  z-index: 100;
+}
+
+.verification-tooltip {
+  display: none;
+  position: absolute;
+  width: 200px;
+  background: #1e1e2c;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  top: 100%;
+  right: 0;
+  font-size: 0.8rem;
+}
+
+.verification-badge:hover .verification-tooltip {
+  display: block;
+}
+
+.message.verified {
+  position: relative;
+}
+
+.message.verified::after {
+  content: '✓ Mensagem verificada';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(43, 138, 62, 0.9);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.message.verified:hover::after {
+  opacity: 1;
+}
+
+.chat-container .footer {
+    background: var(--dark);
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 0.9rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.verification-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.verification-toast.show {
+  transform: translateX(0);
+}
+
+.verification-toast.valid {
+  border-left: 4px solid #2b8a3e;
 }

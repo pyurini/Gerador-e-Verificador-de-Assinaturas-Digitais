@@ -1,6 +1,6 @@
 import base64
 import hashlib
-from flask import Flask, render_template, request, jsonify # Adicionado jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import time
 import random
@@ -11,13 +11,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'seguranca2025!' # Use uma chave mais robusta em produção
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Inicializa o sistema de assinatura digital
-# Isso gera as chaves RSA para o bot e para um usuário de exemplo
+# Inicializa o sistema de assinatura
 signature_system = DigitalSignature()
 
-# --- Gerenciamento de Estado do Usuário ---
-# Dicionário para armazenar o estado de cada usuário conectado (por session ID do SocketIO)
-# Em uma aplicação real, isso seria um banco de dados para persistir os dados.
+# --- Gerenciamento de Estado ---
 user_states = {}
 
 def get_user_state(sid):
@@ -37,7 +34,7 @@ def update_user_state(sid, key, value):
     state[key] = value
     state['last_interaction'] = time.time()
 
-# --- Lógica de Comandos do Bot ---
+# --- Comandos do Bot ---
 # Funções que implementam a lógica para cada comando do bot.
 # Cada função recebe o 'sid' (para acessar o estado do usuário) e a 'message_text' completa.
 
@@ -66,10 +63,10 @@ def handle_set_name(sid, message_text):
         new_name = parts[1].strip() # Pega a segunda parte como o nome
         if new_name:
             update_user_state(sid, 'name', new_name) # Atualiza o estado do usuário
-            return f"Entendido! De agora em diante, vou te chamar de {new_name}."
-    return "Para definir seu nome, use: /nome [seu nome]"
+            return f"Entendido! Agora te chamo de {new_name}."
+    return "Você ainda não me falou seu nome. Use /nome [seu nome] para definir."
 
-def handle_get_name(sid, message_text):
+def handle_get_name(sid, message_text):  
     """Lida com o comando /meunome, informando o nome atual do usuário."""
     user_state = get_user_state(sid)
     name = user_state['name']
@@ -85,20 +82,20 @@ bot_commands = {
     "/meunome": handle_get_name
 }
 
-def process_message_for_bot(sid, message):
+def process_message(sid, message):
     """
     Processa a mensagem do usuário para determinar a resposta do bot.
     Verifica se a mensagem é um comando ou uma mensagem geral.
     """
     message_lower = message.lower().strip()
     if message_lower.startswith('/'):
-        cmd = message_lower.split(' ')[0] # Extrai o comando
+        cmd = message_lower.split(' ')[0]
         if cmd in bot_commands:
             # Chama a função de manipulação de comando mapeada
             return bot_commands[cmd](sid, message)
         return "Comando desconhecido. Digite /ajuda para ajuda."
     
-    # Respostas para mensagens que não são comandos
+    # Respostas gerais se não for um comando
     if "olá" in message_lower or "oi" in message_lower:
         return handle_greeting(sid, message)
     elif "como você está" in message_lower:
@@ -106,12 +103,9 @@ def process_message_for_bot(sid, message):
     elif "obrigado" in message_lower or "valeu" in message_lower:
         return "De nada! Fico feliz em ajudar."
     else:
-        # Resposta padrão para qualquer outra mensagem
         return f"Utilize algum comando disponível:\n /ola, /ajuda, /nome [seu nome], /meunome."
 
-
-# --- Rotas e Eventos do SocketIO ---
-
+# --- Handlers SocketIO ---
 @app.route('/')
 def index():
     """
@@ -174,7 +168,7 @@ def handle_message(message_text): # O 'data' do cliente é agora 'message_text' 
     }, broadcast=True)
 
     # 3. Processa a mensagem com a lógica do bot para obter a resposta
-    bot_response_text = process_message_for_bot(sid, message_text)
+    bot_response_text = process_message(sid, message_text)
 
     # --- DEBUG: Imprime a resposta do bot antes de ser enviada ---
     print(f"DEBUG (Servidor): Resposta do bot (antes de emitir): '{bot_response_text}'")
@@ -198,20 +192,12 @@ def handle_message(message_text): # O 'data' do cliente é agora 'message_text' 
 def verify_signature_route(): # Renomeado para evitar conflito com 'verifySignature' no JS
     """
     Rota HTTP para verificar uma assinatura digital.
-    Recebe a mensagem e a assinatura (e opcionalmente o salt, embora não seja mais usado externamente).
+    Recebe a mensagem original e a assinatura.
     """
     try:
         data = request.get_json()
         message = data['message']
         signature_b64 = data['signature']
-        # salt = data.get('salt', '') # Salt não é mais necessário ser enviado separadamente
-
-        # Determina qual chave pública usar para verificação
-        # Se a mensagem foi enviada pelo 'Bot', verifica com a chave pública do bot.
-        # Caso contrário (se for uma mensagem de usuário), verifica com a chave pública do usuário.
-        # Para simplificar, vou assumir que estamos verificando mensagens do bot aqui,
-        # pois o botão de verificar está apenas nas mensagens do bot.
-        # Em um sistema real, você precisaria de um mecanismo para saber quem assinou.
         
         # Para este exemplo, vamos verificar com a chave pública do bot,
         # já que o botão de verificação está nas mensagens do bot.
@@ -229,10 +215,12 @@ def verify_signature_route(): # Renomeado para evitar conflito com 'verifySignat
         print(f"Erro na verificação da assinatura: {e}") # Loga o erro no servidor
         return jsonify({
             'valid': False,
-            'error': str(e)
+            'error': str(e),
+            'message': 'Erro interno na verificação.'
         }), 400
     
 if __name__ == '__main__':
     # use_reloader=False é recomendado quando se usa SocketIO com debug=True
     # para evitar problemas de duplicação de processos.
     socketio.run(app, debug=True, use_reloader=False)
+

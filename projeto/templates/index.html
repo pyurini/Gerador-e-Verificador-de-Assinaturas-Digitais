@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mensagens Assinadas</title>
-    <!-- Inclui a biblioteca Socket.IO do cliente (URL CORRIGIDO) -->
+    <!-- Inclui a biblioteca Socket.IO do cliente -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <!-- Inclui Font Awesome para ícones (URL CORRIGIDO) -->
+    <!-- Inclui Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Inclui o seu arquivo de estilo CSS personalizado -->
     <link rel="stylesheet" href="/static/style.css">
@@ -62,8 +62,9 @@
             transform: translateX(150%);
             transition: transform 0.3s ease;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column; /* Alterado para coluna para o conteúdo extra */
+            align-items: flex-start; /* Alinha o conteúdo à esquerda */
+            gap: 5px; /* Espaçamento menor para o conteúdo */
         }
 
         .verification-toast.show {
@@ -78,6 +79,23 @@
         .verification-toast.invalid {
             border-left: 4px solid #c92a2a;
             color: #c92a2a;
+        }
+
+        .verification-toast .toast-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+        }
+
+        .verification-toast .toast-details {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            word-break: break-all; /* Garante que o texto longo quebre */
+        }
+        .verification-toast.invalid .toast-details {
+            color: #c92a2a; /* Garante que os detalhes de erro sejam vermelhos */
         }
 
         .verification-badge {
@@ -141,21 +159,30 @@
         const messageInput = document.getElementById('msg');
 
         // Função para mostrar notificações de verificação (toast)
-        function showVerificationToast(message, isValid) {
+        // Adicionado parâmetro 'details' para informações adicionais
+        function showVerificationToast(message, isValid, details = null) {
             const toast = document.createElement('div');
             toast.className = `verification-toast ${isValid ? 'valid' : 'invalid'}`;
-            toast.innerHTML = `
-                <i class="fas fa-${isValid ? 'check' : 'times'}"></i>
-                <span>${message}</span>
-            `;
             
+            let toastContent = `
+                <div class="toast-header">
+                    <i class="fas fa-${isValid ? 'check' : 'times'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            if (details) {
+                toastContent += `<div class="toast-details">${details}</div>`;
+            }
+            
+            toast.innerHTML = toastContent;
             document.body.appendChild(toast);
             
-            setTimeout(() => toast.classList.add('show'), 10); // Adiciona a classe 'show' após um pequeno atraso
+            setTimeout(() => toast.classList.add('show'), 10);
             setTimeout(() => {
-                toast.classList.remove('show'); // Remove a classe 'show' para iniciar a transição de saída
-                setTimeout(() => toast.remove(), 300); // Remove o elemento do DOM após a transição
-            }, 3000); // O toast fica visível por 3 segundos
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 20000); // Aumentado para 5 segundos para permitir leitura dos detalhes
         }
 
         // Função para verificar assinaturas (chamada pelo botão "Verificar")
@@ -167,20 +194,35 @@
             btn.disabled = true; // Desabilita o botão para evitar cliques múltiplos
             
             try {
-                // Faz uma requisição POST para a rota /verify no servidor Flask
+                const originalMessageContent = messageData.content; // Conteúdo original da mensagem
+                let alteredMessageContent = originalMessageContent; // Começa como o original
+
+                const simulateInvalid = confirm("Deseja simular uma assinatura inválida para esta mensagem?");
+
+                let dataToSend = {
+                    message: originalMessageContent, // Por padrão, envia o original
+                    signature: messageData.signature
+                };
+                let verificationDetails = null; // Para armazenar as diferenças
+
+                if (simulateInvalid) {
+                    // Simula a alteração: adiciona um texto ao final da mensagem
+                    alteredMessageContent = originalMessageContent + " (alterado)";
+                    dataToSend.message = alteredMessageContent; // Envia a mensagem alterada para o backend
+                    console.warn("Simulando assinatura inválida: Conteúdo da mensagem foi alterado para verificação!");
+                    
+                    // Prepara os detalhes para o toast
+                    verificationDetails = `Original: "${originalMessageContent}"<br>Alterado: "${alteredMessageContent}"`;
+                }
+
                 const response = await fetch('/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: messageData.content,
-                        signature: messageData.signature
-                        // O salt não é mais enviado separadamente, pois a lógica PSS interna gerencia isso
-                    })
+                    body: JSON.stringify(dataToSend)
                 });
                 
                 const result = await response.json(); // Pega a resposta JSON do servidor
                 
-                // Atualiza a UI com o resultado da verificação
                 if (result.valid) {
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> Válida';
                     btn.style.backgroundColor = '#2b8a3e'; // Cor verde para válido
@@ -192,16 +234,16 @@
                 } else {
                     btn.innerHTML = '<i class="fas fa-times-circle"></i> Inválida';
                     btn.style.backgroundColor = '#c92a2a'; // Cor vermelha para inválido
-                    showVerificationToast('✗ Falha na verificação da assinatura!', false);
+                    // Passa os detalhes para o toast se a simulação foi ativada
+                    showVerificationToast('✗ Falha na verificação da assinatura!', false, simulateInvalid ? verificationDetails : null);
                 }
                 
             } catch (error) {
                 console.error('Erro na verificação:', error); // Loga qualquer erro na rede ou no servidor
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro';
                 btn.style.backgroundColor = '#fcc419'; // Cor amarela para erro
-                showVerificationToast('⚠ Erro durante a verificação', false);
+                showVerificationToast('⚠ Erro durante a verificação', false, `Detalhes do erro: ${error.message || error}`);
             } finally {
-                // Retorna o botão ao estado normal após 5 segundos
                 setTimeout(() => {
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> Verificar';
                     btn.style.backgroundColor = ''; // Remove a cor de fundo personalizada
@@ -211,19 +253,15 @@
         }
 
         // Função para adicionar mensagens ao chat
-        // Recebe um objeto 'messageData' completo do servidor
         function addMessage(messageData) {
             const msgDiv = document.createElement('div');
-            // Adiciona classes CSS para estilização (user-message ou system-message)
             msgDiv.className = `message ${messageData.isUser ? 'user-message' : 'system-message'}`;
             
             const now = new Date();
             const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             
-            // Lógica para exibir o botão de verificação apenas para mensagens do bot que têm assinatura
             let verifyBtnHtml = '';
             if (!messageData.isUser && messageData.signature && messageData.signature !== 'N/A') {
-                // Passa o objeto messageData completo para a função verifySignature
                 verifyBtnHtml = `
                     <div class="signature-verify">
                         <span class="signature-preview">Assinatura: ${messageData.signature.substring(0,15)}...</span>
@@ -234,46 +272,39 @@
                 `;
             }
             
-            // Constrói o HTML interno da mensagem
             msgDiv.innerHTML = `
                 <div class="message-header">
                     <span class="message-sender">${messageData.sender}</span>
                     <span class="message-time">${timeString}</span>
                 </div>
                 <div class="message-content">${messageData.content}</div>
-                ${verifyBtnHtml} <!-- Insere o botão de verificação se existir -->
+                ${verifyBtnHtml}
             `;
             
-            chatContainer.appendChild(msgDiv); // Adiciona a mensagem ao contêiner do chat
-            chatContainer.scrollTop = chatContainer.scrollHeight; // Rola para o final
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         // --- Eventos do Socket.IO ---
         
-        // Evento 'resposta': Recebe mensagens do servidor (tanto do usuário quanto do bot)
         socket.on('resposta', messageData => {
             console.log("DEBUG (Cliente): Mensagem recebida do servidor:", messageData);
-            addMessage(messageData); // Adiciona a mensagem ao chat
+            addMessage(messageData);
         });
         
         // --- Funções de Envio de Mensagem ---
 
-        // Função 'send': Envia a mensagem do input para o servidor
         function send() {
             const text = messageInput.value.trim();
-            if (text === '') return; // Não envia mensagens vazias
+            if (text === '') return;
             
-            // Emite o evento 'mensagem' para o servidor, com o texto do input
             socket.emit('mensagem', text);
-            
-            messageInput.value = ''; // Limpa o campo de entrada
+            messageInput.value = '';
         }
         
-        // Adiciona um listener para o evento 'keypress' no campo de input
-        // Permite enviar a mensagem pressionando a tecla 'Enter'
         messageInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                send(); // Chama a função send()
+                send();
             }
         });
     </script>

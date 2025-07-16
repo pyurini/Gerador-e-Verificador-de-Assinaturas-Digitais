@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mensagens Assinadas</title>
-    <!-- Inclui a biblioteca Socket.IO do cliente -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <!-- Inclui Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Inclui o seu arquivo de estilo CSS personalizado -->
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* Estilos adicionais para verificação */
         .verified-message {
             border-left: 4px solid #2b8a3e;
             background-color: rgba(43, 138, 62, 0.05);
@@ -62,9 +58,9 @@
             transform: translateX(150%);
             transition: transform 0.3s ease;
             display: flex;
-            flex-direction: column; /* Alterado para coluna para o conteúdo extra */
-            align-items: flex-start; /* Alinha o conteúdo à esquerda */
-            gap: 5px; /* Espaçamento menor para o conteúdo */
+            flex-direction: column; 
+            align-items: flex-start; 
+            gap: 5px; 
         }
 
         .verification-toast.show {
@@ -92,10 +88,10 @@
             font-size: 0.85rem;
             color: #666;
             margin-top: 5px;
-            word-break: break-all; /* Garante que o texto longo quebre */
+            word-break: break-all; 
         }
         .verification-toast.invalid .toast-details {
-            color: #c92a2a; /* Garante que os detalhes de erro sejam vermelhos */
+            color: #c92a2a; 
         }
 
         .verification-badge {
@@ -137,8 +133,6 @@
         </div>
 
         <div class="chat-messages" id="chat">
-            <!-- Mensagens serão inseridas aqui via JavaScript -->
-            <!-- A mensagem de sistema inicial será enviada pelo bot ao conectar -->
         </div>
 
         <div class="input-area">
@@ -153,13 +147,10 @@
     </div>
 
     <script>
-        // Configurações iniciais
         const socket = io();
         const chatContainer = document.getElementById('chat');
         const messageInput = document.getElementById('msg');
 
-        // Função para mostrar notificações de verificação (toast)
-        // Adicionado parâmetro 'details' para informações adicionais
         function showVerificationToast(message, isValid, details = null) {
             const toast = document.createElement('div');
             toast.className = `verification-toast ${isValid ? 'valid' : 'invalid'}`;
@@ -182,36 +173,34 @@
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
-            }, 20000); // Aumentado para 5 segundos para permitir leitura dos detalhes
+            }, 20000); 
         }
 
         // Função para verificar assinaturas (chamada pelo botão "Verificar")
         async function verifySignature(messageData) {
-            const btn = event.target.closest('.verify-btn'); // Pega o botão que foi clicado
-            
-            // Estado de carregamento do botão
+            const btn = event.target.closest('.verify-btn'); 
+
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
-            btn.disabled = true; // Desabilita o botão para evitar cliques múltiplos
+            btn.disabled = true; 
             
             try {
-                const originalMessageContent = messageData.content; // Conteúdo original da mensagem
-                let alteredMessageContent = originalMessageContent; // Começa como o original
+                const originalMessageContent = messageData.content; 
+                let alteredMessageContent = originalMessageContent; 
 
                 const simulateInvalid = confirm("Deseja simular uma assinatura inválida para esta mensagem?");
 
                 let dataToSend = {
-                    message: originalMessageContent, // Por padrão, envia o original
+                    message: originalMessageContent, 
                     signature: messageData.signature
                 };
-                let verificationDetails = null; // Para armazenar as diferenças
+
+                let verificationDetails = null; 
 
                 if (simulateInvalid) {
-                    // Simula a alteração: adiciona um texto ao final da mensagem
-                    alteredMessageContent = originalMessageContent + " (alterado)";
-                    dataToSend.message = alteredMessageContent; // Envia a mensagem alterada para o backend
+                    alteredMessageContent = originalMessageContent + " (SISTEMA FOI INVADIDO!!!!!!!!!)"; 
+                    dataToSend.message = alteredMessageContent; 
                     console.warn("Simulando assinatura inválida: Conteúdo da mensagem foi alterado para verificação!");
                     
-                    // Prepara os detalhes para o toast
                     verificationDetails = `Original: "${originalMessageContent}"<br>Alterado: "${alteredMessageContent}"`;
                 }
 
@@ -225,29 +214,29 @@
                 
                 if (result.valid) {
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> Válida';
-                    btn.style.backgroundColor = '#2b8a3e'; // Cor verde para válido
+                    btn.style.backgroundColor = '#2b8a3e'; 
                     showVerificationToast('✓ Assinatura verificada com sucesso!', true);
                     
-                    // Adiciona efeito visual na mensagem (borda verde)
+    
                     const messageDiv = btn.closest('.message');
                     messageDiv.classList.add('verified-message');
                 } else {
                     btn.innerHTML = '<i class="fas fa-times-circle"></i> Inválida';
-                    btn.style.backgroundColor = '#c92a2a'; // Cor vermelha para inválido
-                    // Passa os detalhes para o toast se a simulação foi ativada
+                    btn.style.backgroundColor = '#c92a2a'; 
+                    
                     showVerificationToast('✗ Falha na verificação da assinatura!', false, simulateInvalid ? verificationDetails : null);
                 }
                 
             } catch (error) {
-                console.error('Erro na verificação:', error); // Loga qualquer erro na rede ou no servidor
+                console.error('Erro na verificação:', error); 
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro';
-                btn.style.backgroundColor = '#fcc419'; // Cor amarela para erro
+                btn.style.backgroundColor = '#fcc419'; 
                 showVerificationToast('⚠ Erro durante a verificação', false, `Detalhes do erro: ${error.message || error}`);
             } finally {
                 setTimeout(() => {
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> Verificar';
-                    btn.style.backgroundColor = ''; // Remove a cor de fundo personalizada
-                    btn.disabled = false; // Reabilita o botão
+                    btn.style.backgroundColor = ''; 
+                    btn.disabled = false; 
                 }, 5000);
             }
         }
@@ -285,14 +274,13 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // --- Eventos do Socket.IO ---
         
         socket.on('resposta', messageData => {
             console.log("DEBUG (Cliente): Mensagem recebida do servidor:", messageData);
             addMessage(messageData);
         });
         
-        // --- Funções de Envio de Mensagem ---
+        // Funções de envio de mensagem 
 
         function send() {
             const text = messageInput.value.trim();

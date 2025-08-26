@@ -1,3 +1,4 @@
+# signature.py
 import math
 import hashlib
 import base64

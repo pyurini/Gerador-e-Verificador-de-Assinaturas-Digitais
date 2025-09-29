@@ -112,3 +112,18 @@ def ask_llm(prompt: str) -> str:
 Faz requisição ao modelo de sua escolha e retorna a resposta em texto
 
 No fluxo de handle_message, chame ask_llm dentro de try/except antes de assinar e enviar a resposta.
+<img width="1856" height="951" alt="Tela inicial" src="https://github.com/user-attachments/assets/97308c84-c780-456a-9f06-299f90a477c3" />
+<img width="1591" height="324" alt="verificação valida" src="https://github.com/user-attachments/assets/01db8ec2-244d-4591-9dde-ceb425bac38d" />
+
+Após verificada a assinatura e validada
+<img width="1859" height="947" alt="assinatura verde" src="https://github.com/user-attachments/assets/2b362acf-df0c-4110-a075-41bdd11416d9" />
+<img width="1591" height="324" alt="verificação valida" src="https://github.com/user-attachments/assets/d96e8f6f-0d54-42ee-8a01-44c820d95911" />
+
+Caso inválida
+<img width="1863" height="948" alt="sistema invadido" src="https://github.com/user-attachments/assets/afdf2179-14db-4ff8-b21f-f5022245392a" />
+<img width="1602" height="736" alt="assinatura invalida" src="https://github.com/user-attachments/assets/b5788f7f-b189-4602-9b43-e390a36e0979" />
+
+
+assinatura completa
+<img width="1601" height="736" alt="assinatura terminal" src="https://github.com/user-attachments/assets/4a9cdde2-b434-40d3-bfcf-193fa5eeb1f4" />
+
